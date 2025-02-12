@@ -4,12 +4,8 @@ FROM gentoo/portage:latest AS portage
 FROM gentoo/stage3:latest AS build
 SHELL ["/bin/bash", "-c"]
 
-ARG ARCH
 ARG VERSION
-ARG IMAGE
 ENV VERSION=${VERSION}
-ENV ARCH=${ARCH}
-ENV IMAGE=${IMAGE}
 
 COPY --from=portage /var/db/repos/gentoo /var/db/repos/gentoo
 
@@ -21,10 +17,11 @@ RUN mkdir -p /tmp/chroot
 RUN echo "MAKEOPTS=-j$(($(nproc) / 2 + 1))" >> /etc/portage/make.conf
 RUN echo "EMERGE_DEFAULT_OPTS=\"\${EMERGE_DEFAULT_OPTS} --jobs $(($(nproc) / 4 + 1))\"" >> /etc/portage/make.conf
 
-# we dont want to rebuild the glibc, build a binary package for the chroot
+# we dont want to rebuild the glibc/pam, build a binary package for the chroot
 RUN quickpkg --include-config=y sys-libs/glibc
+RUN quickpkg --include-config=y sys-libs/pam || true
 RUN getuto
-RUN emerge --nodeps --root /tmp/chroot --oneshot mednafen-server sys-apps/busybox sys-libs/glibc sys-libs/pam
+RUN emerge --nodeps --root /tmp/chroot --oneshot =games-server/mednafen-server-${VERSION}* sys-apps/busybox sys-libs/glibc sys-libs/pam
 
 RUN /tmp/chroot/bin/busybox --install /tmp/chroot/usr/bin
 RUN cp -av /etc/group /etc/shadow /etc/passwd /tmp/chroot/etc/
